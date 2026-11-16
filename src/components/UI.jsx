@@ -1,0 +1,15 @@
+import {useEffect,useState} from 'react';import {CheckCircle2,AlertCircle,X,Loader2} from 'lucide-react';import {errText,currency,dateTime} from '../lib/api';
+export function Panel({title,action,children,sub,className=''}){return <section className={'panel '+className}>{title&&<div className="panel-head"><div><h3>{title}</h3>{sub&&<p>{sub}</p>}</div>{action}</div>}{children}</section>}
+export function Heading({title,sub,action}){return <div className="page-heading"><div><h1>{title}</h1>{sub&&<p>{sub}</p>}</div>{action}</div>}
+export function Button({children,kind='primary',loading,disabled,...rest}){return <button className={'btn '+kind} disabled={loading||disabled} {...rest}>{loading&&<Loader2 size={16} className="spin"/>}{children}</button>}
+export function Input({label,as='input',options,help,...rest}){return <label className="field"><span>{label}</span>{as==='select'?<select {...rest}>{options?.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>:as==='textarea'?<textarea {...rest}/>:<input {...rest}/>}{help&&<small>{help}</small>}</label>}
+export function Alert({message,type='error',onClose}){return message?<div className={'notice '+type}>{type==='error'?<AlertCircle size={18}/>:<CheckCircle2 size={18}/>}<span>{message}</span>{onClose&&<button onClick={onClose} aria-label="Close"><X size={16}/></button>}</div>:null}
+export function useNotice(){const [notice,setNotice]=useState(null);const success=m=>setNotice({type:'success',message:m});const error=e=>setNotice({type:'error',message:typeof e==='string'?e:errText(e)});return{notice,success,error,clear:()=>setNotice(null)}}
+export function Notice({state}){return <Alert {...state.notice} onClose={state.clear}/>}
+export function Status({value}){const status=String(value||'UNKNOWN').replaceAll('_',' ');return <span className={'status status-'+status.toLowerCase().replaceAll(' ','-')}>{status}</span>}
+export function Money({value}){return <strong className="money">{currency(value)}</strong>}
+export function Empty({title='No data yet',sub='Add a record to get started.'}){return <div className="empty"><span>◎</span><h3>{title}</h3><p>{sub}</p></div>}
+export function Loading(){return <div className="loading"><Loader2 className="spin" size={30}/> Loading...</div>}
+export function Stat({label,value,icon:Icon,detail}){return <div className="stat"><span className="stat-icon">{Icon&&<Icon size={20}/>}</span><p>{label}</p><h2>{value}</h2>{detail&&<small>{detail}</small>}</div>}
+export function Modal({title,children,onClose}){return <div className="modal-overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><div className="modal"><header><h3>{title}</h3><button className="icon-btn" onClick={onClose}><X/></button></header>{children}</div></div>}
+export function DataTable({headers,rows,render}){return <div className="table-wrap"><table><thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={r.id||i}>{render(r,i)}</tr>)}</tbody></table>{!rows.length&&<Empty title="No records found"/>}</div>}

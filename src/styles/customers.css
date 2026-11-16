@@ -1,0 +1,45 @@
+.customer-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+.customer-overview>div{padding:20px 22px;background:#fff;border:1px solid #e4e8ef;border-radius:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.customer-overview span{font-size:13px;color:#536078;font-weight:600;display:flex;align-items:center;gap:6px}
+.customer-overview strong{font-size:26px;color:#121722;letter-spacing:-.6px}
+.customer-filters{display:flex;align-items:end;gap:14px;margin:0 0 20px;flex-wrap:wrap}
+.customer-filters>.field{min-width:165px;flex:1;max-width:260px}
+.customer-filters>.btn{margin-bottom:3px}
+.customer-search{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border:1px solid #d8dfe9;border-radius:12px;background:#f8fafc;flex:2;min-width:230px}
+.customer-search input{width:100%;border:none;background:transparent;outline:none;font-size:14px;color:#19202b}
+.customer-person{display:flex;gap:11px;align-items:center}
+.customer-person>div{min-width:0}.customer-person small{display:block;margin-top:5px;color:#647084;font-size:12px}
+.customer-avatar{display:flex;align-items:center;justify-content:center;background:#fff2c5;border-radius:12px;width:40px;height:40px;color:#171b21;flex-shrink:0}
+.customer-channel{padding:6px 10px;background:#f5f7fa;border-radius:8px;font-size:12px;font-weight:700;white-space:nowrap}
+.customer-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.customer-icon-link{width:38px;height:38px;border:1px solid #dde2e9;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#1b232f;background:#fff}
+.customer-icon-link:hover{background:#fff4c8;border-color:#efb600}
+.customer-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;flex-wrap:wrap;color:#5a6474;font-size:13px}
+.customer-pagination>div{display:flex;align-items:center;gap:9px}
+.customer-tabbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 20px}
+.customer-tabbar a{display:inline-flex;align-items:center;gap:9px;padding:12px 16px;border-radius:11px;background:#fff;border:1px solid #e1e4ec;color:#1c2430;text-decoration:none;font-weight:700;font-size:13px}
+.customer-tabbar a:hover,.customer-tabbar a.selected{background:#ffcf29;border-color:#ffcf29;color:#121822}
+.customer-form-stack{max-width:1030px}
+.customer-hint{display:flex;align-items:flex-start;gap:10px;margin:17px 0;padding:15px 17px;background:#f3f7fb;color:#32435b;border-radius:12px;font-size:13px;line-height:1.5}
+.customer-hint.warning{background:#fff7dd;border:1px solid #f4e4a6;color:#624c17}
+.customer-profile-data{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.customer-profile-data>div{background:#f7f9fc;border-radius:12px;padding:13px}
+.customer-profile-data span{display:block;color:#617086;font-size:12px;margin-bottom:8px}
+.customer-profile-data strong{font-size:14px;word-break:break-word}
+.customer-ride-card{display:flex;justify-content:space-between;gap:12px;padding:16px 4px;border-bottom:1px solid #e9edf2;color:#202735;text-decoration:none}
+.customer-ride-card:last-child{border-bottom:0}
+.customer-ride-card>div:first-child{min-width:0}
+.customer-ride-card p{color:#536078;font-size:13px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:7px 0;max-width:440px}
+.customer-ride-card small{color:#758095;font-size:12px}
+.customer-ride-card>div:last-child{display:flex;flex-direction:column;gap:10px;align-items:flex-end;flex-shrink:0}
+.customer-route{max-width:340px;min-width:175px}
+.customer-route strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.customer-route small{display:block;color:#6a778a;font-size:12px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.booking-customer-box{border:1px solid #e3e8f0;border-radius:14px;padding:17px 18px;margin:15px 0;background:#fffefa}
+.booking-customer-box h4{margin:0 0 10px;font-size:15px}
+.booking-customer-switch{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px}
+.booking-customer-switch button{border:1px solid #d8dfe8;border-radius:10px;background:#fff;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer}
+.booking-customer-switch button.selected{border-color:#d7a900;background:#ffcf29}
+.booking-customer-box .customer-search{margin-bottom:12px}
+.booking-customer-note{font-size:12px;color:#576275;margin:8px 0 0}
+@media(max-width:700px){.customer-filters>.field{max-width:none;flex:1 0 170px}.customer-profile-data{grid-template-columns:1fr}.customer-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-actions .btn{font-size:12px}.customer-ride-card{flex-direction:column}.customer-ride-card>div:last-child{flex-direction:row;justify-content:space-between;align-items:center}}
