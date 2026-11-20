@@ -37,6 +37,10 @@ export default function Drivers() {
   const [noteText, setNoteText] = useState('');
   const [salaryRate, setSalaryRate] = useState(0);
   const [salaryType, setSalaryType] = useState('MONTHLY');
+  const [overtimeRate,setOvertimeRate]=useState(0);
+  const [markMonth,setMarkMonth]=useState(new Date().toISOString().slice(0,7));
+  const [marks,setMarks]=useState([]),[markEvidence,setMarkEvidence]=useState(null);
+  const [scores,setScores]=useState({punctuality:5,customerService:5,safety:5,vehicleCare:5,attendance:5,notes:''});
   const [pendingFiles, setPendingFiles] = useState({});
   const [busy, setBusy] = useState(false);
   const notice = useNotice();
@@ -54,7 +58,9 @@ export default function Drivers() {
     setPendingFiles({});
     setNoteText('');
     setSalaryRate(Number(driver.profile?.salaryRate || 0));
-    setSalaryType(driver.profile?.salaryType || 'MONTHLY');
+    setSalaryType(['MONTHLY','WEEKLY','DAILY'].includes(driver.profile?.salaryType)?driver.profile.salaryType:'MONTHLY');
+    setOvertimeRate(Number(driver.profile?.overtimeRate||0));
+    api.get(`/drivers/${driver.id}/marks`,{params:{month:markMonth}}).then(r=>{setMarks(r.data.marks||[]);setMarkEvidence(r.data.evidence)}).catch(notice.error);
   };
   const submitDocuments = async () => {
     if (!selected || !Object.values(pendingFiles).some(Boolean)) return notice.error('Select documents to upload');
@@ -84,13 +90,15 @@ export default function Drivers() {
   const saveSalary = async () => {
     setBusy(true);
     try {
-      await api.patch(`/drivers/${selected.id}`, { salaryType, salaryRate: Number(salaryRate) });
+      await api.patch(`/drivers/${selected.id}`, { salaryType, salaryRate: Number(salaryRate),overtimeRate:Number(overtimeRate) });
       notice.success('Salary settings saved');
       await load();
     } catch (error) { notice.error(error); }
     finally { setBusy(false); }
   };
 
+  async function setAdminAvailability(enabled){try{await api.patch(`/drivers/${selected.id}/admin-availability`,{adminEnabled:enabled});notice.success(enabled?'Driver enabled for duty':'Driver blocked from dispatch');await load()}catch(e){notice.error(e)}}
+  async function saveMarks(){try{await api.put(`/drivers/${selected.id}/marks`,{month:markMonth,...scores});const r=await api.get(`/drivers/${selected.id}/marks`,{params:{month:markMonth}});setMarks(r.data.marks);setMarkEvidence(r.data.evidence);notice.success('Monthly service marks saved')}catch(e){notice.error(e)}}
   const selectedDocuments = documentMap(selected?.profile?.documents);
 
   return <>
@@ -102,7 +110,7 @@ export default function Drivers() {
         <td><strong>{driver.name}</strong><small className="block muted">{driver.profile?.employeeCode || driver.username || driver.mobile}</small></td>
         <td>{driver.profile?.kind || '—'}</td>
         <td><Status value={driver.profile?.verification}/></td>
-        <td><Status value={driver.profile?.available ? 'AVAILABLE' : 'OFFLINE'}/></td>
+        <td><Status value={driver.profile?.adminEnabled===false?'ADMIN INACTIVE':driver.profile?.available?'AVAILABLE':'OFFLINE'}/></td>
         <td>{currency(driver.profile?.salaryRate || 0)} / {driver.profile?.salaryType || 'monthly'}</td>
         <td><Button kind="secondary" onClick={() => open(driver)}><ShieldCheck size={16}/> Review</Button></td>
       </>}/>
@@ -119,6 +127,8 @@ export default function Drivers() {
         <div><span>Aadhaar last 4</span><strong>{selected.profile?.aadhaarLast4 ? '•••• ' + selected.profile.aadhaarLast4 : '—'}</strong></div>
         <div><span>Emergency contact</span><strong>{selected.profile?.emergencyName || '—'} · {selected.profile?.emergencyMobile || '—'}</strong></div>
         <div><span>Relationship</span><strong>{selected.profile?.emergencyRelation || '—'}</strong></div>
+        <div className="driver-review-wide"><span>Emergency network</span><strong>{(Array.isArray(selected.profile?.emergencyContacts)?selected.profile.emergencyContacts:(()=>{try{return JSON.parse(selected.profile?.emergencyContacts||'[]')}catch{return []}})()).map(c=>`${c.name} (${c.relation}) ${c.mobile}`).join(' • ')||'—'}</strong></div>
+        <div><span>Languages</span><strong>{selected.profile?.languages||'—'}</strong></div>
         <div className="driver-review-wide"><span>Permanent address</span><strong>{addressText(selected.profile?.permanentAddress)}</strong></div>
         <div className="driver-review-wide"><span>Temporary address</span><strong>{addressText(selected.profile?.temporaryAddress)}</strong></div>
         <div><span>Background check</span><Status value={selected.profile?.backgroundCheckStatus || 'NOT_STARTED'}/></div>
@@ -144,10 +154,23 @@ export default function Drivers() {
       <div className="driver-review-divider"/>
       <h3>Salary settings</h3>
       <div className="form-grid">
-        <Input label="Salary type" as="select" value={salaryType} onChange={(e) => setSalaryType(e.target.value)} options={['MONTHLY','DAILY','PER_TRIP','HOURLY'].map((value) => ({ value, label: value.replaceAll('_', ' ') }))}/>
+        <Input label="Salary type" as="select" value={salaryType} onChange={(e) => setSalaryType(e.target.value)} options={['MONTHLY','WEEKLY','DAILY'].map((value) => ({ value, label: value.replaceAll('_', ' ') }))}/>
         <Input label="Salary rate (₹)" type="number" min="0" step="0.01" value={salaryRate} onChange={(e) => setSalaryRate(e.target.value)}/>
+        <Input label="Overtime rate (₹/hour)" type="number" min="0" step="0.01" value={overtimeRate} onChange={e=>setOvertimeRate(e.target.value)}/>
       </div>
       <Button kind="secondary" loading={busy} onClick={saveSalary}>Save salary settings</Button>
+      <div className="driver-review-divider"/>
+      <h3>Admin duty control</h3>
+      <p className="muted">Disabling prevents automatic dispatch and ends active duty shifts. It does not delete the driver account.</p>
+      <div className="form-actions"><Status value={selected.profile?.adminEnabled===false?'INACTIVE':'ACTIVE'}/><Button kind="secondary" onClick={()=>setAdminAvailability(selected.profile?.adminEnabled===false)}>{selected.profile?.adminEnabled===false?'Enable driver':'Disable driver'}</Button></div>
+      <div className="driver-review-divider"/>
+      <h3>Monthly driver service marks</h3>
+      <Input label="Review month" type="month" value={markMonth} onChange={async e=>{const value=e.target.value;setMarkMonth(value);try{const r=await api.get(`/drivers/${selected.id}/marks`,{params:{month:value}});setMarks(r.data.marks||[]);setMarkEvidence(r.data.evidence)}catch(err){notice.error(err)}}}/>
+      {markEvidence&&<p className="muted">Trip evidence for {markEvidence.month}: {markEvidence.completedTrips} completed rides, {markEvidence.reviewCount} customer reviews, customer rating {markEvidence.customerRating??'not available'}/5. The score below is manually assessed by an operator.</p>}
+      <div className="form-grid">{[['punctuality','Punctuality'],['customerService','Customer service'],['safety','Safety'],['vehicleCare','Vehicle care'],['attendance','Attendance']].map(([k,label])=><Input key={k} label={`${label} (0–5)`} type="number" min="0" max="5" step="1" value={scores[k]} onChange={e=>setScores(p=>({...p,[k]:Number(e.target.value)}))}/>)}</div>
+      <Input label="Assessment notes" as="textarea" value={scores.notes} onChange={e=>setScores(p=>({...p,notes:e.target.value}))}/>
+      <div className="form-actions"><Button kind="secondary" onClick={saveMarks}>Save service scorecard</Button></div>
+      {marks.length>0&&<DataTable headers={['Month','Score / 5','Notes']} rows={marks} render={m=><><td>{m.month}</td><td><strong>{m.total}</strong></td><td>{m.notes||'—'}</td></>}/>}
       <div className="driver-review-divider"/>
       <h3>Document verification</h3>
       <Input label="Verification notes" value={noteText} onChange={(e) => setNoteText(e.target.value)}/>

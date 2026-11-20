@@ -1,6 +1,6 @@
 import React from 'react';import {BrowserRouter,Navigate,Route,Routes,Outlet,useLocation} from 'react-router-dom';import {useJsApiLoader} from '@react-google-maps/api';
 import {AuthProvider,useAuth} from './context/AuthContext';import {Layout} from './components/Layout';import Login from './pages/Login';import Booking from './pages/Booking';import Dashboard from './pages/Dashboard';import AnalyticsDetailed from './pages/AnalyticsDetailed';import Branches from './pages/Branches';import Pricing from './pages/Pricing';import Users from './pages/Users';
-import Customers from './pages/Customers.jsx';
+import Customers from './pages/Customers.jsx';import StaffDocuments from './pages/StaffDocuments.jsx';
 import CustomerForm from './pages/CustomerForm.jsx';
 import CustomerDetails from './pages/CustomerDetails.jsx';
 import CustomerRides from './pages/CustomerRides.jsx';
@@ -25,6 +25,7 @@ function Router(){const {user,token}=useAuth();return <Routes><Route path="/logi
  <Route path="customers/:id/rides" element={<Gate roles={ADMIN} permission="customers.view"><CustomerRides mode="active"/></Gate>}/>
  <Route path="customers/:id/history" element={<Gate roles={ADMIN} permission="customers.view"><CustomerRides mode="history"/></Gate>}/>
  <Route path="users" element={<Gate roles={ADMIN} permission="users.manage"><Users/></Gate>}/>
+ <Route path="staff/:id/documents" element={<Gate roles={ADMIN} permission="users.manage"><StaffDocuments/></Gate>}/>
  <Route path="vehicles" element={<Gate roles={ADMIN} permission="vehicles.manage"><Vehicles/></Gate>}/>
  <Route path="vehicles/new" element={<Gate roles={ADMIN} permission="vehicles.manage"><VehicleForm/></Gate>}/>
  <Route path="vehicles/:id/edit" element={<Gate roles={ADMIN} permission="vehicles.manage"><VehicleForm/></Gate>}/>

@@ -18,7 +18,8 @@ const createInitialForm = () => ({
   experienceYears: '', licenseNumber: '', licenseExpiry: '', licenseClasses: 'LMV',
   aadhaarLast4: '', permanentAddress: emptyAddress(), temporaryAddress: emptyAddress(),
   emergencyName: '', emergencyMobile: '', emergencyRelation: '',
-  salaryType: 'MONTHLY', salaryRate: '', bloodGroup: '', languages: 'Tamil',
+  emergencyContacts: [{name:'',mobile:'',relation:'BLOOD_RELATIVE'}], rentCapabilities:['MANUAL','AUTOMATIC','LUXURY'], overtimeRate:0,
+  salaryType: 'MONTHLY', salaryRate: '', bloodGroup: '', languages: ['Tamil'],
   referenceName: '', referenceMobile: '', homeLat: '', homeLng: '', backgroundCheckStatus: 'NOT_STARTED',
   onboardingNote: '',
 });
@@ -34,7 +35,7 @@ const DOC_GROUPS = [
   { key: 'experienceProof', label: 'Experience proof', hint: 'Optional' },
   { key: 'qualificationProof', label: 'Training certificate', hint: 'Optional' },
   { key: 'bankProof', label: 'Masked bank proof', hint: 'Optional; hide full account number' },
-  { key: 'signedAgreement', label: 'Signed employment agreement', hint: 'Optional' },
+  { key: 'signedAgreement', label: 'Signed Periyar Taxi driver agreement', mandatory: true, hint: 'Signed contract (PDF/image)' },
 ];
 
 function randomPassword() {
@@ -103,6 +104,9 @@ export default function CreateDriver() {
     catch { setCopyMessage('Copy not permitted by this browser; select the text instead'); }
   }
 
+  const emergencyChange=(index,key,value)=>setForm(f=>({...f,emergencyContacts:f.emergencyContacts.map((c,i)=>i===index?{...c,[key]:value}:c)}));
+  const newEmergency=()=>setForm(f=>({...f,emergencyContacts:[...f.emergencyContacts,{name:'',mobile:'',relation:'FRIEND'}]}));
+  const removeEmergency=index=>setForm(f=>({...f,emergencyContacts:f.emergencyContacts.filter((_,i)=>i!==index)}));
   async function handleSubmit(event) {
     event.preventDefault();
     if (busy) return;
@@ -112,10 +116,12 @@ export default function CreateDriver() {
     if (!/^\d{6}$/.test(form.permanentAddress.pincode)) return notice.error('Enter a valid 6-digit permanent address pincode');
     const temporary = Object.values(form.temporaryAddress).some((value) => String(value || '').trim() && value !== 'Tamil Nadu');
     if (temporary && !/^\d{6}$/.test(form.temporaryAddress.pincode)) return notice.error('Enter a valid temporary address pincode');
+    if(!form.emergencyContacts.length||form.emergencyContacts.some(c=>!c.name.trim()||!c.mobile.trim()||!c.relation))return notice.error('Complete every emergency contact');
     const data = new FormData();
     for (const [key, value] of Object.entries(form)) {
       if (key === 'temporaryAddress' && !temporary) continue;
-      if (['permanentAddress', 'temporaryAddress'].includes(key)) data.append(key, JSON.stringify(value));
+      if (['permanentAddress', 'temporaryAddress','emergencyContacts','rentCapabilities'].includes(key)) data.append(key, JSON.stringify(value));
+      else if (key==='languages') data.append(key, value.join(','));
       else if (value !== '' && value != null) data.append(key, String(value));
     }
     Object.entries(files).forEach(([key, file]) => { if (file) data.append(key, file); });
@@ -162,7 +168,7 @@ export default function CreateDriver() {
           <Input label="Email (optional)" type="email" value={form.email} onChange={(e) => change('email', e.target.value)}/>
           <Input label="Date of birth *" required type="date" max={today()} value={form.dateOfBirth} onChange={(e) => change('dateOfBirth', e.target.value)}/>
           <Input label="Blood group (optional)" as="select" value={form.bloodGroup} onChange={(e) => change('bloodGroup', e.target.value)} options={['','A+','A-','B+','B-','AB+','AB-','O+','O-'].map((v) => ({ value: v, label: v || 'Not specified' }))}/>
-          <Input label="Languages spoken" value={form.languages} onChange={(e) => change('languages', e.target.value)}/>
+          <div className="full"><strong>Spoken languages (choose all that apply)</strong><div className="operations-checkbox-grid">{['Tamil','English','Hindi','Malayalam','Kannada','Telugu','Urdu','Other'].map(v=><label key={v}><input type="checkbox" checked={form.languages.includes(v)} onChange={e=>change('languages',e.target.checked?[...form.languages,v]:form.languages.filter(x=>x!==v))}/> {v}</label>)}</div></div>
         </div>
       </Panel>
 
@@ -173,8 +179,10 @@ export default function CreateDriver() {
           <Input label="Employment type" as="select" value={form.kind} onChange={(e) => change('kind', e.target.value)} options={[{ value: 'PERMANENT', label: 'Permanent' }, { value: 'ACTING', label: 'Acting / On-call' }]}/>
           <Input label="Joining date *" required type="date" value={form.joinedOn} onChange={(e) => change('joinedOn', e.target.value)}/>
           <Input label="Driving experience (years)" type="number" min="0" max="75" value={form.experienceYears} onChange={(e) => change('experienceYears', e.target.value)}/>
-          <Input label="Salary type" as="select" value={form.salaryType} onChange={(e) => change('salaryType', e.target.value)} options={['MONTHLY','DAILY','PER_TRIP','HOURLY'].map((v) => ({ value: v, label: v.replaceAll('_', ' ') }))}/>
+          <Input label="Salary type" as="select" value={form.salaryType} onChange={(e) => change('salaryType', e.target.value)} options={['MONTHLY','WEEKLY','DAILY'].map((v) => ({ value: v, label: v.replaceAll('_', ' ') }))}/>
           <Input label="Salary rate (₹)" type="number" min="0" step="0.01" value={form.salaryRate} onChange={(e) => change('salaryRate', e.target.value)}/>
+          <Input label="Overtime payment / hour (₹)" type="number" min="0" step="0.01" value={form.overtimeRate} onChange={e=>change('overtimeRate',e.target.value)}/>
+          {form.kind==='ACTING'&&<div className="full"><strong>Available for Driver for Rent</strong><div className="operations-checkbox-grid">{['MANUAL','AUTOMATIC','LUXURY'].map(v=><label key={v}><input type="checkbox" checked={form.rentCapabilities.includes(v)} onChange={e=>change('rentCapabilities',e.target.checked?[...form.rentCapabilities,v]:form.rentCapabilities.filter(x=>x!==v))}/> {v}</label>)}</div></div>}
         </div>
       </Panel>
 
@@ -229,9 +237,13 @@ export default function CreateDriver() {
       <Panel>
         <SectionTitle index="07" title="Emergency & reference contacts" icon={UsersRound} description="A contact to reach in case of an accident, plus an optional employment reference."/>
         <div className="form-grid">
-          <Input label="Emergency contact name *" required value={form.emergencyName} onChange={(e) => change('emergencyName', e.target.value)}/>
-          <Input label="Emergency mobile *" required placeholder="+91XXXXXXXXXX" value={form.emergencyMobile} onChange={(e) => change('emergencyMobile', e.target.value)}/>
-          <Input label="Relationship *" required placeholder="Spouse / parent / sibling" value={form.emergencyRelation} onChange={(e) => change('emergencyRelation', e.target.value)}/>
+          <div className="full"><div className="form-actions" style={{justifyContent:'space-between'}}><strong>Emergency contacts (unlimited)</strong><Button kind="secondary" type="button" onClick={newEmergency}><Plus size={16}/> Add contact</Button></div>
+            {form.emergencyContacts.map((contact,i)=><div key={i} className="emergency-contact-entry"><div className="form-grid">
+              <Input label={`Contact ${i+1} name *`} required value={contact.name} onChange={e=>emergencyChange(i,'name',e.target.value)}/>
+              <Input label="Mobile number *" required value={contact.mobile} onChange={e=>emergencyChange(i,'mobile',e.target.value)}/>
+              <Input label="Relationship" as="select" value={contact.relation} onChange={e=>emergencyChange(i,'relation',e.target.value)} options={['BLOOD_RELATIVE','FRIEND','SPOUSE','PARENT','SIBLING','CHILD','NEIGHBOUR','OTHER'].map(v=>({value:v,label:v.replaceAll('_',' ')}))}/>
+              <div className="form-actions" style={{alignItems:'end'}}>{form.emergencyContacts.length>1&&<Button type="button" kind="danger-outline" onClick={()=>removeEmergency(i)}>Remove</Button>}</div>
+            </div></div>)}</div>
           <Input label="Reference person's name" value={form.referenceName} onChange={(e) => change('referenceName', e.target.value)}/>
           <Input label="Reference mobile" value={form.referenceMobile} onChange={(e) => change('referenceMobile', e.target.value)}/>
           <Input label="Background verification" as="select" value={form.backgroundCheckStatus} onChange={(e) => change('backgroundCheckStatus', e.target.value)} options={[

@@ -14,7 +14,7 @@ const newForm = () => ({
   ownerDetails: { name: '', mobile: '', alternateMobile: '', address: '', city: '', state: 'Tamil Nadu', pincode: '', relation: '' },
   attachmentTerms: { startDate: '', endDate: '', settlementType: 'PER_TRIP', settlementRate: 0, notes: '' },
 });
-const types = ['MINI', 'SEDAN', 'SUV', 'SUV_PLUS'];
+const types = ['MINI', 'SEDAN', 'SUV', 'SUV_PLUS', 'TEMPO_TRAVELLER', 'COACH_VAN', 'MINI_BUS', 'BUS', 'URBANIA'];
 const fuels = ['Petrol', 'Diesel', 'CNG', 'Petrol + CNG', 'Petrol + Electric', 'Electric', 'Hybrid'];
 const dateProps = ['registrationDate', 'insuranceExpiry', 'pollutionExpiry', 'permitExpiry', 'fitnessExpiry', 'roadTaxExpiry', 'serviceDueDate'];
 function Section({ number, title, sub, children }) { return <Panel><div className="fleet-section"><span>{number}</span><div><h3>{title}</h3><p>{sub}</p></div></div>{children}</Panel>; }
@@ -54,13 +54,13 @@ export default function VehicleForm() {
           <Input label="Branch" as="select" value={form.branchId} disabled={editing} required onChange={e => change('branchId', e.target.value)} options={branches.map(b => ({ value: b.id, label: b.name }))}/>
           <Input label="Ownership" as="select" value={form.ownershipType} onChange={e => change('ownershipType', e.target.value)} options={[{ value: 'COMPANY', label: 'Company-owned vehicle' }, { value: 'ATTACHED', label: 'Attached vehicle (external owner)' }]}/>
           <Input label="Registration number" required value={form.registration || ''} disabled={editing} onChange={e => change('registration', e.target.value.toUpperCase())} placeholder="TN 33 AB 1234"/>
-          <Input label="Category" as="select" value={form.type} onChange={e => change('type', e.target.value)} options={types.map(v => ({ value: v, label: v.replace('_', '+') }))}/>
+          <Input label="Category" as="select" value={form.type} onChange={e => change('type', e.target.value)} options={types.map(v => ({ value: v, label: v.replaceAll('_', ' ') }))}/>
           <Input label="Vehicle brand" required value={form.brand || ''} onChange={e => change('brand', e.target.value)} placeholder="Maruti Suzuki"/>
           <Input label="Vehicle name" required value={form.name || ''} onChange={e => change('name', e.target.value)} placeholder="Dzire"/>
           <Input label="Variant" value={form.variant || ''} onChange={e => change('variant', e.target.value)}/>
           <Input label="Model year" required type="number" min="1980" max={new Date().getFullYear() + 1} value={form.modelYear || ''} onChange={e => change('modelYear', e.target.value)}/>
           <Input label="Fuel type" as="select" value={form.fuelType || 'Petrol'} onChange={e => change('fuelType', e.target.value)} options={fuels.map(v => ({ value: v, label: v }))}/>
-          <Input label="Seating capacity (including driver)" required type="number" min="2" max="25" value={form.seats ?? 5} onChange={e => change('seats', e.target.value)}/>
+          <Input label="Seating capacity (including driver)" required type="number" min="2" max="80" value={form.seats ?? 5} onChange={e => change('seats', e.target.value)}/>
           <Input label="Vehicle availability" as="select" value={form.vehicleStatus || 'AVAILABLE'} onChange={e => change('vehicleStatus', e.target.value)} options={[{ value: 'AVAILABLE', label: 'Available once verified' }, { value: 'MAINTENANCE', label: 'Under maintenance' }, { value: 'RETIRED', label: 'Retired' }]}/>
           {!editing && <Input label="Current odometer (km)" type="number" min="0" step="0.1" value={form.odometerKm || 0} onChange={e => change('odometerKm', e.target.value)}/>}
         </div>

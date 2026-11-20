@@ -1,0 +1,12 @@
+/* Periyar Taxi operations upgrade — additive CRM styles, existing design retained. */
+.operations-checkbox-grid{display:flex;flex-wrap:wrap;gap:8px 12px;margin:10px 0 4px}
+.operations-checkbox-grid label{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid #d8dfe7;border-radius:9px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#2b3440}
+.operations-checkbox-grid input{width:16px;height:16px;accent-color:#e4b510;margin:0}
+.operations-checkbox-grid label:has(input:checked){background:#fff7d9;border-color:#e0bb34;color:#1c2228}
+.emergency-contact-entry{padding:14px;margin:12px 0;background:#f9fafc;border:1px solid #e1e5ea;border-radius:12px}
+.emergency-contact-entry .form-grid{align-items:end}
+.driver-rent-vehicle-box{padding:18px;background:#fffaf0;border:1px solid #f0d67e;border-radius:12px;margin:12px 0}
+.driver-rent-vehicle-box h3{font-size:16px;margin:0 0 6px;font-weight:750;color:#1f252d}
+.driver-rent-vehicle-box .form-grid{margin-top:15px}
+.driver-review-summary strong{overflow-wrap:anywhere}
+@media(max-width:680px){.operations-checkbox-grid{gap:7px}.operations-checkbox-grid label{flex:1 0 calc(50% - 12px);min-width:125px}.emergency-contact-entry{padding:11px}.driver-rent-vehicle-box{padding:12px}}

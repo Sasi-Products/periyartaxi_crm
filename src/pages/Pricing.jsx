@@ -1,149 +1,100 @@
-import { useEffect, useMemo, useState } from 'react';
-import { api, currency } from '../lib/api.js';
-import { Heading, Panel, Input, Button, Notice, useNotice, DataTable, Status } from '../components/UI.jsx';
-import { Save, Plus, Pencil, RotateCcw, Calculator, Info } from 'lucide-react';
+import {useEffect,useMemo,useState} from 'react';
+import {Save,Plus,Pencil,Trash2,RotateCcw,Calculator} from 'lucide-react';
+import {api,currency} from '../lib/api.js';
+import {Heading,Panel,Input,Button,Notice,useNotice,DataTable,Status} from '../components/UI.jsx';
 
-const SERVICES = [
-  ['LOCAL', 'Local Trips'], ['LOCAL_PACKAGE', 'Local Package Boundaries'], ['OUTSTATION', 'Outstation'],
-  ['DRIVER_RENT', 'Driver for Rent'], ['VALET', 'Valet Parking'],
-];
-const DEFAULTS = {
-  LOCAL: { baseKm: 3, baseFare: 100, extraKm: 21, boundaryFee: 70, graceKm: 3, convertAfterKm: 3, waitingPerMinute: 0, waitingGraceMinutes: 0 },
-  LOCAL_PACKAGE: { boundaryFee: 70, graceKm: 3, convertAfterKm: 3 },
-  OUTSTATION: { shortThresholdKm: 100, minFare: 450, includedKm: 30, perKm: 13, shortIncludedHours: 3, longIncludedHours: 5, extraHour: 80, oneWayDistanceMultiplier: 1, roundTripDistanceMultiplier: 2 },
-  DRIVER_RENT: { minimumHours: 6, minimumFare: 700, extraHour: 55 },
-  VALET: { minimumHours: 4, perDriverBaseFare: 0, extraHourPerDriver: 0, maxDrivers: 30 },
+const CARS=['ALL','MINI','SEDAN','SUV','SUV_PLUS','TEMPO_TRAVELLER','COACH_VAN','MINI_BUS','BUS','URBANIA'];
+const RENT=['ALL','MANUAL','AUTOMATIC','LUXURY'];
+const SERVICES=[['LOCAL','Local Trips'],['LOCAL_PACKAGE','Local Packages'],['OUTSTATION','Outstation'],['DRIVER_RENT','Driver for Rent'],['VALET','Valet Parking']];
+const defaults={
+ LOCAL:{baseKm:3,baseFare:100,extraKm:21,boundaryFee:70,graceKm:3,convertAfterKm:3,waitingPerMinute:0,waitingGraceMinutes:0},
+ LOCAL_PACKAGE:{boundaryFee:70,graceKm:3,convertAfterKm:3},
+ OUTSTATION:{shortThresholdKm:100,minFare:450,includedKm:30,perKm:13,shortIncludedHours:3,longIncludedHours:5,extraHour:80,oneWayDistanceMultiplier:1,roundTripDistanceMultiplier:2},
+ DRIVER_RENT:{minimumHours:6,minimumFare:700,extraHour:55},
+ VALET:{minimumHours:4,perDriverBaseFare:0,extraHourPerDriver:0,maxDrivers:30},
 };
-const FIELDS = {
-  LOCAL: [
-    ['baseKm', 'Minimum included KM', 'Number of kilometres covered by the base fare'],
-    ['baseFare', 'Fare for initial kilometres (₹)', 'Example: first 3 km = ₹100'],
-    ['extraKm', 'Extra kilometre (₹/km)', 'Example: ₹21 per km above 3 km'],
-    ['boundaryFee', 'Empty / boundary charge (₹)', 'Additional charge for allowed boundary crossing'],
-    ['graceKm', 'Outside boundary charge distance (km)', 'Maximum beyond-boundary km eligible for the empty charge'],
-    ['convertAfterKm', 'Auto Outstation conversion beyond (km)', 'If driven farther outside the boundary, use Outstation fare'],
-    ['waitingPerMinute', 'Approved passenger waiting (₹/minute)', 'Only separately approved passenger stops; 0 disables additional waiting fare'],
-    ['waitingGraceMinutes', 'Free waiting minutes', 'Grace minutes across approved passenger stops in the ride'],
-  ],
-  LOCAL_PACKAGE: [
-    ['boundaryFee', 'Empty / boundary charge (₹)', 'Applies to package journeys within the permitted boundary grace'],
-    ['graceKm', 'Outside boundary grace (km)', 'Up to this outside distance, the empty charge may apply'],
-    ['convertAfterKm', 'Auto Outstation conversion beyond (km)', 'Outside distance above this converts the local package trip'],
-  ],
-  OUTSTATION: [
-    ['shortThresholdKm', 'Distance threshold (km)', 'Below 100 km uses minimum-fare pricing; 100 km and above uses per-km pricing'],
-    ['minFare', 'Minimum fare below threshold (₹)', 'Example: ₹450 for the first 30 km'],
-    ['includedKm', 'KM included in minimum fare', 'Example: 30 km'],
-    ['perKm', 'Additional / long-distance rate (₹/km)', 'Example: ₹13/km'],
-    ['shortIncludedHours', 'Included hours below threshold', 'Example: 3 hours'],
-    ['longIncludedHours', 'Included hours at/above threshold', 'Example: 5 hours'],
-    ['extraHour', 'Extra hour charge (₹/hour)', 'Example: ₹80/hour'],
-    ['oneWayDistanceMultiplier', 'One-way billable-distance multiplier', '1 = actual route KM'],
-    ['roundTripDistanceMultiplier', 'Round-trip billable-distance multiplier', '2 = route distance × 2'],
-  ],
-  DRIVER_RENT: [
-    ['minimumHours', 'Minimum booking hours', 'Example: 6 hours'],
-    ['minimumFare', 'Minimum driver charge (₹)', 'Example: ₹700 for 6 hours'],
-    ['extraHour', 'Extra hour charge (₹/hour)', 'Example: ₹55 per additional hour'],
-  ],
-  VALET: [
-    ['minimumHours', 'Included hours per valet driver', 'Example: 4 hours'],
-    ['perDriverBaseFare', 'Base charge per driver (₹)', 'Multiply by the selected number of drivers'],
-    ['extraHourPerDriver', 'Extra hour per driver (₹)', 'Additional hourly charge for each requested valet driver'],
-    ['maxDrivers', 'Maximum drivers per booking', 'For safety and staffing control'],
-  ],
+const specs={
+ LOCAL:[['baseKm','Minimum included KM'],['baseFare','Base fare (₹)'],['extraKm','Extra KM (₹/km)'],['boundaryFee','Boundary / empty charge (₹)'],['graceKm','Boundary charge threshold (km)'],['convertAfterKm','Convert to Outstation beyond (km)'],['waitingPerMinute','Approved passenger waiting (₹/min)'],['waitingGraceMinutes','Free waiting (minutes)']],
+ LOCAL_PACKAGE:[['boundaryFee','Boundary / empty charge (₹)'],['graceKm','Boundary grace (km)'],['convertAfterKm','Outstation conversion threshold (km)']],
+ DRIVER_RENT:[['minimumHours','Minimum hours'],['minimumFare','Minimum driver rent (₹)'],['extraHour','Extra hour (₹/hour)']],
+ VALET:[['minimumHours','Included event hours'],['perDriverBaseFare','Base charge per driver (₹)'],['extraHourPerDriver','Extra hour per driver (₹/hour)'],['maxDrivers','Maximum number of drivers']],
 };
-const newPackage = () => ({ name: '2 Hours / 20 KM', hours: 2, kms: 20, baseFare: 420, extraHour: 90, extraKm: 21, active: true });
-function normalize(value) {
-  if (typeof value === 'string') { try { value = JSON.parse(value); } catch { return {}; } }
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-function describeExample(service, c) {
-  if (service === 'LOCAL') return `Example 8 km = ₹${(Number(c.baseFare) + Math.max(0, 8 - Number(c.baseKm)) * Number(c.extraKm)).toLocaleString('en-IN')}. Add ₹${c.boundaryFee} if boundary charge applies.`;
-  if (service === 'OUTSTATION') return `Below ${c.shortThresholdKm} km: ₹${c.minFare} covers ${c.includedKm} km, then ₹${c.perKm}/km. At/above ${c.shortThresholdKm} km: ₹${c.perKm}/billable km. One-way/round-trip use their own distance multipliers.`;
-  if (service === 'DRIVER_RENT') return `${c.minimumHours} hours cost ₹${c.minimumFare}; extra hours cost ₹${c.extraHour}/hour. Customer supplies the vehicle.`;
-  if (service === 'VALET') return `Valet is billed per driver: ₹${c.perDriverBaseFare} for ${c.minimumHours} hours, plus ₹${c.extraHourPerDriver} for every extra hour per driver.`;
-  return 'These boundary conditions apply to local package trips. Package hours, kilometres and fares are maintained separately below.';
-}
-export default function Pricing() {
-  const note = useNotice();
-  const [branches, setBranches] = useState([]); const [branchId, setBranchId] = useState('');
-  const [service, setService] = useState('LOCAL'); const [rules, setRules] = useState({});
-  const [drafts, setDrafts] = useState({}); const [packages, setPackages] = useState([]);
-  const [pkg, setPkg] = useState(newPackage); const [editId, setEditId] = useState(null); const [busy, setBusy] = useState(false);
-  useEffect(() => { api.get('/branches').then(({ data }) => { setBranches(data || []); setBranchId(String(data?.[0]?.id || '')); }).catch(note.error); }, []);
-  const load = async (bId = branchId) => {
-    if (!bId) return;
-    try {
-      const [pricing, local] = await Promise.all([api.get('/pricing', { params: { branchId: bId } }), api.get('/pricing/packages', { params: { branchId: bId } })]);
-      setRules(Object.fromEntries((pricing.data || []).map(item => [item.service, normalize(item.config)])));
-      setPackages(Array.isArray(local.data) ? local.data : []);
-    } catch (e) { note.error(e); }
-  };
-  useEffect(() => { setDrafts({}); setEditId(null); setPkg(newPackage()); load(branchId); }, [branchId]);
-  const draftKey = `${branchId}:${service}`;
-  const current = useMemo(() => ({ ...DEFAULTS[service], ...normalize(rules[service]), ...normalize(drafts[draftKey]) }), [service, rules, drafts, draftKey]);
-  const change = (key, value) => setDrafts(p => ({ ...p, [draftKey]: { ...p[draftKey], [key]: Number(value) } }));
-  async function save() {
-    if (!branchId) return note.error('Select a branch');
-    if (service === 'OUTSTATION' && current.shortThresholdKm <= current.includedKm) return note.error('Distance threshold must exceed included KM');
-    if (service === 'VALET' && !current.perDriverBaseFare) return note.error('Enter a base fare per valet driver');
-    setBusy(true); note.clear();
-    try {
-      await api.put('/pricing', { branchId: Number(branchId), service, config: current });
-      note.success(`${SERVICES.find(([k]) => k === service)?.[1]} pricing saved for ${branches.find(b => String(b.id) === branchId)?.name || 'branch'}`);
-      setDrafts(p => { const next = { ...p }; delete next[draftKey]; return next; });
-      await load();
-    } catch (e) { note.error(e); } finally { setBusy(false); }
+const emptyPackage=(category='ALL')=>({name:'',vehicleType:category,hours:2,kms:20,baseFare:420,extraHour:90,extraKm:21,active:true});
+const json=v=>{if(typeof v==='string'){try{v=JSON.parse(v)}catch{return {}}}return v&&typeof v==='object'&&!Array.isArray(v)?v:{}};
+const categoryLabel=s=>s==='ALL'?'All categories (fallback)':s.replaceAll('_',' ').toLowerCase().replace(/\b\w/g,m=>m.toUpperCase());
+export default function Pricing(){
+ const note=useNotice();const [branches,setBranches]=useState([]),[branchId,setBranchId]=useState('');
+ const [service,setService]=useState('LOCAL'),[category,setCategory]=useState('ALL'),[rules,setRules]=useState({}),[versions,setVersions]=useState({});
+ const [drafts,setDrafts]=useState({}),[packages,setPackages]=useState([]),[pkg,setPkg]=useState(emptyPackage),[editId,setEditId]=useState(null),[busy,setBusy]=useState(false),[band,setBand]=useState('BELOW');
+ const categories=service==='DRIVER_RENT'?RENT:CARS;
+ const choice=categories.includes(category)?category:'ALL';
+ const key=`${branchId}:${choice}:${service}`;
+ const current=useMemo(()=>{
+  const source={...defaults[service],...json(rules[service]),...json(drafts[key])};
+  if(service==='OUTSTATION'){
+   for(const field of ['shortPerKm','longPerKm'])if(source[field]===undefined)source[field]=Number(source.perKm||13);
+   for(const field of ['shortExtraHour','longExtraHour'])if(source[field]===undefined)source[field]=Number(source.extraHour||80);
   }
-  async function savePackage() {
-    if (!branchId) return note.error('Select a branch');
-    setBusy(true); note.clear();
-    try {
-      const data = { ...pkg, branchId: Number(branchId), hours: Number(pkg.hours), kms: Number(pkg.kms), baseFare: Number(pkg.baseFare), extraHour: Number(pkg.extraHour), extraKm: Number(pkg.extraKm) };
-      if (editId) await api.patch(`/pricing/packages/${editId}`, data); else await api.post('/pricing/packages', data);
-      note.success('Package saved'); setEditId(null); setPkg(newPackage()); await load();
-    } catch (e) { note.error(e); } finally { setBusy(false); }
-  }
-  function suggestPackage() {
-    const sorted = [...packages].filter(p => p.active).sort((a,b) => Number(a.hours)-Number(b.hours));
-    const base = sorted.at(-1) || pkg;
-    const hours = Number(base.hours) + 1; const kms = Number(base.kms) + 10;
-    const amount = Number(base.baseFare) + Number(base.extraHour) + 10 * Number(base.extraKm);
-    setEditId(null); setPkg({ name: `${hours} Hours / ${kms} KM`, hours, kms, baseFare: amount, extraHour: Number(base.extraHour), extraKm: Number(base.extraKm), active: true });
-  }
-  return <>
-    <Heading title="Dynamic fares & packages" sub="Define each of the five Periyar Taxi services independently for each branch."/>
-    <Notice state={note}/>
-    <Panel title="Fare configuration" sub="Only new fare quotations use updated rates. Existing ride quotations preserve their saved pricing snapshot.">
-      <div className="form-grid">
-        <Input label="Branch" as="select" value={branchId} onChange={e => setBranchId(e.target.value)} options={branches.map(b => ({ value: b.id, label: b.name }))}/>
-        <Input label="Service" as="select" value={service} onChange={e => setService(e.target.value)} options={SERVICES.map(([value, label]) => ({ value, label }))}/>
-      </div>
-      <div className="fare-service-header"><Calculator size={19}/><div><strong>{SERVICES.find(([key]) => key === service)?.[1]} pricing</strong><p>{service === 'LOCAL_PACKAGE' ? 'Configure the local boundary policy here; manage actual packages below.' : 'All pricing values are editable and saved against the selected branch.'}</p></div></div>
-      <div className="form-grid pricing-fields">
-        {FIELDS[service].map(([key, label, help]) => <Input key={key} label={label} help={help} type="number" min="0" step={['baseKm', 'includedKm', 'shortThresholdKm', 'maxDrivers'].includes(key) ? '1' : 'any'} value={current[key] ?? 0} onChange={e => change(key, e.target.value)} required/>)}
-      </div>
-      <div className="fare-example"><Info size={18}/><span>{describeExample(service, current)}</span></div>
-      <div className="form-actions"><Button loading={busy} onClick={save}><Save size={16}/> Save {SERVICES.find(([key]) => key === service)?.[1]} rates</Button>
-        <Button kind="secondary" onClick={() => setDrafts(p => { const next = { ...p }; delete next[draftKey]; return next; })}><RotateCcw size={15}/> Discard unsaved changes</Button>
-      </div>
-    </Panel>
-    {service === 'LOCAL_PACKAGE' && <Panel title="Local package catalogue" sub="Package fares are independent of service boundaries. Define hours, kilometres, minimum fare and additional rates.">
-      <div className="notice info">Example: 2 hrs / 20 km = ₹420. Next 3 hrs / 30 km = ₹420 + ₹90 (extra hour) + ₹210 (10 extra km) = ₹720.</div>
-      <div className="form-grid">
-        <Input label="Package name" required value={pkg.name || ''} onChange={e => setPkg(p => ({ ...p, name: e.target.value }))}/>
-        {[
-          ['hours', 'Included hours'], ['kms', 'Included kilometres'], ['baseFare', 'Minimum/package fare (₹)'], ['extraHour', 'Extra hour (₹/hour)'], ['extraKm', 'Extra kilometre (₹/km)'],
-        ].map(([key, label]) => <Input key={key} label={label} type="number" min="0" step="any" value={pkg[key] ?? 0} onChange={e => setPkg(p => ({ ...p, [key]: Number(e.target.value) }))}/>)}
-        <Input label="Package status" as="select" value={pkg.active ? 'ACTIVE' : 'INACTIVE'} onChange={e => setPkg(p => ({ ...p, active: e.target.value === 'ACTIVE' }))} options={[{ value: 'ACTIVE', label: 'Active' }, { value: 'INACTIVE', label: 'Inactive' }]}/>
-      </div>
-      <div className="form-actions"><Button loading={busy} onClick={savePackage}><Save size={16}/>{editId ? 'Update package' : 'Add new package'}</Button>
-        <Button kind="secondary" onClick={suggestPackage}><Calculator size={16}/> Suggest next +1 hr / +10 km package</Button>
-        {editId && <Button kind="ghost" onClick={() => { setEditId(null); setPkg(newPackage()); }}>Cancel edit</Button>}
-      </div>
-      <DataTable headers={['Package','Hours','KM','Base fare','Extra hour','Extra KM','Status','']} rows={packages}
-        render={p => <><td><strong>{p.name}</strong></td><td>{p.hours} hrs</td><td>{p.kms} km</td><td>{currency(p.baseFare)}</td><td>{currency(p.extraHour)}</td><td>{currency(p.extraKm)}</td><td><Status value={p.active ? 'ACTIVE' : 'INACTIVE'}/></td><td><button className="icon-btn" type="button" onClick={() => { setPkg({ ...p }); setEditId(p.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><Pencil size={16}/></button></td></>}/>
-    </Panel>}
-  </>;
+  return source;
+ },[service,rules,drafts,key]);
+ useEffect(()=>{api.get('/branches').then(r=>{const list=Array.isArray(r.data)?r.data:[];setBranches(list);setBranchId(String(list[0]?.id||''));}).catch(note.error)},[]);
+ useEffect(()=>{if(!categories.includes(category)){setCategory('ALL');return}if(!branchId)return;let alive=true;
+  Promise.all([api.get('/pricing',{params:{branchId,vehicleType:category}}),api.get('/pricing/packages',{params:{branchId}})]).then(([r,p])=>{
+   if(!alive)return;
+   setRules(Object.fromEntries((r.data||[]).map(x=>[x.service,json(x.config)])));
+   setVersions(Object.fromEntries((r.data||[]).map(x=>[x.service,x.configuredVehicleType])));
+   setPackages(Array.isArray(p.data)?p.data:[]);
+  }).catch(note.error);return()=>{alive=false};
+ },[branchId,category]);
+ function change(k,v){setDrafts(prev=>({...prev,[key]:{...prev[key],[k]:Number(v)}}))}
+ async function reload(){const [r,p]=await Promise.all([api.get('/pricing',{params:{branchId,vehicleType:choice}}),api.get('/pricing/packages',{params:{branchId}})]);setRules(Object.fromEntries((r.data||[]).map(x=>[x.service,json(x.config)])));setVersions(Object.fromEntries((r.data||[]).map(x=>[x.service,x.configuredVehicleType])));setPackages(p.data||[])}
+ async function save(){if(!branchId)return note.error('Select a branch');if(service==='OUTSTATION'&&Number(current.shortThresholdKm)<=Number(current.includedKm))return note.error('Threshold must exceed short-distance included kilometres');setBusy(true);try{
+  await api.put('/pricing',{branchId:Number(branchId),service,vehicleType:choice,config:current});await reload();
+  setDrafts(old=>{const next={...old};delete next[key];return next});note.success(`${SERVICES.find(s=>s[0]===service)[1]} rates saved for ${categoryLabel(choice)}`);
+ }catch(e){note.error(e)}finally{setBusy(false)}}
+ async function savePackage(){setBusy(true);try{
+  const payload={...pkg,branchId:Number(branchId),vehicleType:pkg.vehicleType||'ALL',hours:Number(pkg.hours),kms:Number(pkg.kms),baseFare:Number(pkg.baseFare),extraHour:Number(pkg.extraHour),extraKm:Number(pkg.extraKm)};
+  if(editId)await api.patch(`/pricing/packages/${editId}`,payload);else await api.post('/pricing/packages',payload);
+  setEditId(null);setPkg(emptyPackage(choice));await reload();note.success('Package saved');
+ }catch(e){note.error(e)}finally{setBusy(false)}}
+ async function removePackage(record){if(!window.confirm(`Deactivate “${record.name}” for ${categoryLabel(record.vehicleType||'ALL')}? Existing bookings remain intact.`))return;
+  try{await api.delete(`/pricing/packages/${record.id}`);if(editId===record.id){setEditId(null);setPkg(emptyPackage(choice))}await reload();note.success('Package deactivated; ride history preserved')}catch(e){note.error(e)}
+ }
+ const renderFields=fields=><div className="form-grid pricing-fields">{fields.map(([name,label,help])=><Input key={name} label={label} help={help} type="number" min="0" step="any" value={current[name]??0} onChange={e=>change(name,e.target.value)}/>)}</div>;
+ return <>
+  <Heading title="Vehicle-wise fares & packages" sub="Configure every taxi service for each vehicle category in each branch. Existing rides keep their original rate snapshot."/>
+  <Notice state={note}/>
+  <Panel title="Select fare schedule" sub="All categories is the default. Individual categories can override it without changing the others.">
+   <div className="form-grid">
+    <Input label="Branch" as="select" value={branchId} onChange={e=>{setBranchId(e.target.value);setEditId(null)}} options={branches.map(b=>({value:String(b.id),label:b.name}))}/>
+    <Input label="Service" as="select" value={service} onChange={e=>{setService(e.target.value);setCategory('ALL');setBand('BELOW')}} options={SERVICES.map(([value,label])=>({value,label}))}/>
+    <Input label={service==='DRIVER_RENT'?'Customer vehicle transmission / class':'Periyar Taxi vehicle category'} as="select" value={choice} onChange={e=>{setCategory(e.target.value);setEditId(null)}} options={categories.map(v=>({value:v,label:categoryLabel(v)}))}/>
+   </div>
+   {versions[service]&&versions[service]!==choice&&<p className="notice info">Showing inherited default rates. Press Save to create a dedicated rate for <strong>{categoryLabel(choice)}</strong>.</p>}
+  </Panel>
+  <Panel title={SERVICES.find(s=>s[0]===service)[1]} sub={service==='OUTSTATION'?'Two separately editable distance bands, with their own km and hourly rates.':service==='DRIVER_RENT'?'Set a distinct base price and additional hour charge for Manual, Automatic and Luxury customer vehicles.':'All numeric fields can be changed by the Super Admin.'}>
+   {service!=='OUTSTATION'?renderFields(specs[service]):<>
+    <div className="form-grid"><Input label="Distance split (km)" type="number" value={current.shortThresholdKm} min="1" onChange={e=>change('shortThresholdKm',e.target.value)}/><Input label="One-way billable distance multiplier" type="number" min="0" step="any" value={current.oneWayDistanceMultiplier} onChange={e=>change('oneWayDistanceMultiplier',e.target.value)}/><Input label="Round-trip distance multiplier" type="number" min="0" step="any" value={current.roundTripDistanceMultiplier} onChange={e=>change('roundTripDistanceMultiplier',e.target.value)}/></div>
+    <div className="form-actions" style={{margin:'18px 0'}}><Button kind={band==='BELOW'?'primary':'secondary'} onClick={()=>setBand('BELOW')}>Below {current.shortThresholdKm} km</Button><Button kind={band==='ABOVE'?'primary':'secondary'} onClick={()=>setBand('ABOVE')}>At / above {current.shortThresholdKm} km</Button></div>
+    {band==='BELOW'?<><h3>Short-distance Outstation</h3><p className="muted">Minimum fare includes kilometres and hours, then extra kilometre/hour charges apply.</p>{renderFields([['minFare','Minimum fare (₹)'],['includedKm','KM included'],['shortIncludedHours','Included hours'],['shortPerKm','Extra km (₹/km)'],['shortExtraHour','Extra hour (₹/hour)']])}</>:<><h3>Long-distance Outstation</h3><p className="muted">No minimum fare. All billable kilometres use this rate; included travel hours and extra hour rate are separate.</p>{renderFields([['longPerKm','Fare per km (₹/km)'],['longIncludedHours','Included hours'],['longExtraHour','Additional hour (₹/hour)']])}</>}
+    <DataTable headers={['Distance band','Fare policy','Extra time','Edit']} rows={[
+      {id:'below',name:`Below ${current.shortThresholdKm} km`,policy:`${currency(current.minFare)} includes ${current.includedKm} km; ${currency(current.shortPerKm)}/extra km`,hours:`${current.shortIncludedHours} hrs included, ${currency(current.shortExtraHour)}/extra hr`,band:'BELOW'},
+      {id:'above',name:`At / above ${current.shortThresholdKm} km`,policy:`${currency(current.longPerKm)}/km (no minimum fare)`,hours:`${current.longIncludedHours} hrs included, ${currency(current.longExtraHour)}/extra hr`,band:'ABOVE'}
+    ]} render={r=><><td>{r.name}</td><td>{r.policy}</td><td>{r.hours}</td><td><Button kind="secondary" onClick={()=>setBand(r.band)}><Pencil size={15}/> Edit</Button></td></>}/>
+    <p className="muted">Both bands are saved together for {categoryLabel(choice)}. Switch tabs before saving to review each band.</p>
+   </>}
+   {service==='LOCAL'&&<div className="notice info">Example: 8 km = {currency(Number(current.baseFare||0)+Math.max(0,8-Number(current.baseKm||0))*Number(current.extraKm||0))} before boundary charges.</div>}
+   <div className="form-actions"><Button loading={busy} onClick={save}><Save size={16}/> Save {categoryLabel(choice)} rates</Button><Button kind="secondary" onClick={()=>setDrafts(p=>{const next={...p};delete next[key];return next})}><RotateCcw size={15}/> Discard edits</Button></div>
+  </Panel>
+  {service==='LOCAL_PACKAGE'&&<Panel title="Local packages — create, edit, deactivate" sub="Each package can be available for a specific car category, or for all cars.">
+   <div className="form-grid">
+    <Input label="Vehicle category" as="select" value={pkg.vehicleType} onChange={e=>setPkg(p=>({...p,vehicleType:e.target.value}))} options={CARS.map(v=>({value:v,label:categoryLabel(v)}))}/>
+    <Input label="Package name" value={pkg.name} onChange={e=>setPkg(p=>({...p,name:e.target.value}))}/>
+    {[["hours","Included hours"],["kms","Included kilometres"],["baseFare","Base fare (₹)"],["extraHour","Extra hour (₹/hr)"],["extraKm","Extra kilometre (₹/km)"]].map(([name,label])=><Input key={name} label={label} type="number" min="0" step="any" value={pkg[name]} onChange={e=>setPkg(p=>({...p,[name]:e.target.value}))}/>)}
+    <Input label="Availability" as="select" value={pkg.active?'YES':'NO'} onChange={e=>setPkg(p=>({...p,active:e.target.value==='YES'}))} options={[{value:'YES',label:'Active'},{value:'NO',label:'Inactive'}]}/>
+   </div>
+   <div className="form-actions"><Button loading={busy} onClick={savePackage}><Save size={16}/>{editId?'Update package':'Create package'}</Button>{editId&&<Button kind="secondary" onClick={()=>{setEditId(null);setPkg(emptyPackage(choice))}}>Cancel edit</Button>}</div>
+   <DataTable headers={['Category','Package','Included','Base','Extra hour','Extra km','Status','Actions']} rows={packages} render={r=><><td>{categoryLabel(r.vehicleType||'ALL')}</td><td><strong>{r.name}</strong></td><td>{r.hours} h / {r.kms} km</td><td>{currency(r.baseFare)}</td><td>{currency(r.extraHour)}</td><td>{currency(r.extraKm)}</td><td><Status value={r.active?'ACTIVE':'INACTIVE'}/></td><td><div className="form-actions"><Button kind="secondary" onClick={()=>{setPkg({...r});setEditId(r.id);window.scrollTo({top:0,behavior:'smooth'})}}><Pencil size={15}/> Edit</Button>{r.active&&<Button kind="danger-outline" onClick={()=>removePackage(r)}><Trash2 size={15}/> Delete</Button>}</div></td></>}/>
+  </Panel>}
+ </>;
 }
